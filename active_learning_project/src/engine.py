@@ -8,20 +8,7 @@ import numpy as np
 
 logger = logging.getLogger("ActiveLearning")
 
-class DiceBCELoss(nn.Module):
-    def __init__(self, smooth: float = 1e-6):
-        super().__init__()
-        self.smooth = smooth
-        self.bce = nn.BCELoss()
-
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        bce_loss = self.bce(inputs, targets)
-        inputs_flat = inputs.view(-1)
-        targets_flat = targets.view(-1)
-        intersection = (inputs_flat * targets_flat).sum()
-        dice_loss = 1 - (2. * intersection + self.smooth) / (inputs_flat.sum() + targets_flat.sum() + self.smooth)
-        return bce_loss + dice_loss
-
+from model import DiceBCELoss
 def calculate_dice(pred: torch.Tensor, target: torch.Tensor, smooth: float = 1e-6) -> float:
     num = pred.size(0)
     p_flat = pred.view(num, -1)

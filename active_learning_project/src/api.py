@@ -1,10 +1,13 @@
 import os
 import threading
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
+import datetime
+import zipfile
+import shutil
 import datetime
 
 app = FastAPI(title="Medical AL API")
@@ -77,6 +80,40 @@ async def stop_run():
             experiment_status["logs"].append("Stop requested. Waiting for current cycle to finish...")
         return {"message": "Stop command sent"}
     return {"message": "No experiment running"}
+
+@app.post("/upload")
+async def upload_dataset(file: UploadFile = File(...)):
+    """
+    Accepts a .zip file containing custom images and masks.
+    Expected structure inside zip:
+      /images (contains .png/.jpg)
+      /masks  (contains .png/.jpg)
+    """
+    if not file.filename.endswith('.zip'):
+        raise HTTPException(status_code=400, detail="Only .zip files are supported")
+    
+    upload_dir = os.path.join("data", "uploaded_dataset")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Clear old data
+    for item in os.listdir(upload_dir):
+        item_path = os.path.join(upload_dir, item)
+        if os.path.isdir(item_path):
+            shutil.rmtree(item_path)
+        else:
+            os.remove(item_path)
+            
+    zip_path = os.path.join(upload_dir, "dataset.zip")
+    with open(zip_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(upload_dir)
+        os.remove(zip_path) # Clean up zip after extraction
+        return {"message": "Dataset successfully uploaded and extracted!"}
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Invalid zip file uploaded")
 
 def progress_callback(data: Dict[str, Any]):
     """

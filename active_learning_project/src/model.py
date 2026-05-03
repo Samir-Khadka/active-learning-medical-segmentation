@@ -104,3 +104,26 @@ class UNet(nn.Module):
         x4 = self.down3(x3)
         b = self.bottleneck(x4)
         return F.adaptive_avg_pool2d(b, (1, 1)).view(b.size(0), -1)
+
+class DiceBCELoss(nn.Module):
+    """
+    Veteran Architect's Loss: Combines BCE with Dice Loss.
+    Standard BCE fails on severe class imbalance typical in medical imaging.
+    Dice loss mathematically enforces spatial overlap regardless of background dominance.
+    """
+    def __init__(self, weight=None, size_average=True):
+        super(DiceBCELoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        # Flatten label and prediction tensors
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+        
+        # Binary Cross Entropy
+        bce = F.binary_cross_entropy(inputs, targets, reduction='mean')
+        
+        # Dice Loss
+        intersection = (inputs * targets).sum()                            
+        dice = (2.*intersection + smooth)/(inputs.sum() + targets.sum() + smooth)  
+        
+        return bce + (1 - dice)

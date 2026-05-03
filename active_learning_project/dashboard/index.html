@@ -31,6 +31,17 @@
                     🛑 End Training
                 </button>
             </div>
+            
+            <!-- Upload Custom Dataset -->
+            <div class="upload-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Or use custom data: Upload a .zip with /images and /masks folders</p>
+                <input type="file" id="dataset-upload" accept=".zip" style="display: none;" onchange="uploadDataset()" />
+                <button class="run-btn" style="background: #334155; box-shadow: none; font-size: 0.85rem; padding: 0.6rem 1.2rem;" onclick="document.getElementById('dataset-upload').click()">
+                    📁 Upload Custom Dataset (.zip)
+                </button>
+                <span id="upload-status" style="font-size: 0.85rem; margin-left: 0.5rem; color: var(--success-color);"></span>
+            </div>
+            
             <div class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progress-bar">
                 <div id="progress-fill"></div>
             </div>
@@ -138,6 +149,44 @@
             } catch(e) {
                 console.error('Failed to send stop:', e);
             }
+        }
+        
+        async function uploadDataset() {
+            const fileInput = document.getElementById('dataset-upload');
+            const statusSpan = document.getElementById('upload-status');
+            
+            if (!fileInput.files.length) return;
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            statusSpan.style.color = 'var(--text-secondary)';
+            statusSpan.innerText = 'Uploading...';
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusSpan.style.color = 'var(--success-color)';
+                    statusSpan.innerText = '✅ ' + data.message;
+                } else {
+                    statusSpan.style.color = 'var(--error-color)';
+                    statusSpan.innerText = '❌ Error: ' + data.detail;
+                }
+            } catch (e) {
+                statusSpan.style.color = 'var(--error-color)';
+                statusSpan.innerText = '❌ Failed to upload';
+                console.error(e);
+            }
+            
+            // Reset input so the same file can be uploaded again if needed
+            fileInput.value = '';
         }
 
         function startPolling() {
