@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Learning | Research Insights</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="animate">
+        <div class="container">
+            <h1>Active Learning Insights</h1>
+            <p class="subtitle">Architectural analysis and comparative performance metrics for medical image segmentation.</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="grid">
+            <!-- Performance Section -->
+            <section class="card animate" style="grid-column: span 2;">
+                <h2>📊 Comparative Performance</h2>
+                <img src="assets/al_comparison_standard.png" alt="Performance Graph" class="visual-content">
+                <p>The graph illustrates the learning efficiency of different query strategies. Bayesian Uncertainty (MC-Dropout) typically outperforms random baselines in the early labeling phases.</p>
+            </section>
+
+            <!-- Stats Section -->
+            <section class="card animate">
+                <h2>📈 Key Metrics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">0.6572</div>
+                        <div class="stat-label">Full Baseline</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">~0.53</div>
+                        <div class="stat-label">AL (50% Data)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">Epochs/Cycle</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">Query Budget</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Failure Analysis Section -->
+            <section class="card animate" style="grid-column: span 3;">
+                <h2>🔍 Failure Analysis</h2>
+                <p>Detailed visual audit of model predictions against ground truth labels. These samples highlight the 'honest' limitations of the current architecture.</p>
+                <div class="gallery">
+                    <div class="gallery-item"><img src="assets/analysis_0.png" alt="Sample 0"></div>
+                    <div class="gallery-item"><img src="assets/analysis_1.png" alt="Sample 1"></div>
+                    <div class="gallery-item"><img src="assets/analysis_2.png" alt="Sample 2"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Senior Research Framework | Active Learning for Medical Image Segmentation</p>
+        </div>
+    </footer>
+</body>
+</html>

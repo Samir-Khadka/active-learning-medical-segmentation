@@ -1,0 +1,23 @@
+# Active Learning Experiment Configuration
+data:
+  train_size: 20
+  test_size: 10
+  image_size: 256
+
+model:
+  type: "lightweight_unet"
+  in_channels: 1
+  out_channels: 1
+  lr: 0.001
+  epochs_baseline: 10
+  epochs_al: 8
+
+active_learning:
+  initial_size: 2
+  budget_per_cycle: 2
+  cycles: 4
+  strategies: ["Random", "Uncertainty", "Diversity"]
+
+results:
+  output_dir: "results"
+  save_plots: true
