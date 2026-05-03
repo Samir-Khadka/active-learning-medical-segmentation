@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Real-time dashboard for monitoring Active Learning medical image segmentation experiments. Track Dice scores, training cycles, and uncertainty strategies live.">
+    <meta name="theme-color" content="#0f172a">
+    <title>Active Learning | Real-Time Monitor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="animate">
+        <div class="container">
+            <h1>Active Learning Monitor</h1>
+            <p class="subtitle">Live tracking of Bayesian optimization cycles and neural network convergence.</p>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Control Panel -->
+        <div class="control-panel animate">
+            <div class="btn-row">
+                <button id="run-button" class="run-btn" onclick="startExperiment()" aria-label="Start real-time training experiment">
+                    🚀 Start Real-Time Training
+                </button>
+                <button id="stop-button" class="run-btn" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 4px 20px rgba(239,68,68,0.25);"
+                        onclick="stopExperiment()" disabled aria-label="End current training experiment">
+                    🛑 End Training
+                </button>
+            </div>
+            <div class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+            <div class="status-row">
+                <span id="status-indicator" class="status-idle" aria-hidden="true"></span>
+                <span id="status-text">IDLE</span>
+                <span style="color: rgba(255,255,255,0.2)">|</span>
+                <span>Progress: <strong id="progress-text">0</strong>%</span>
+            </div>
+        </div>
+
+        <!-- Card Grid -->
+        <div class="grid">
+
+            <!-- Live Engine State -->
+            <section class="card animate stat-card-highlight" aria-label="Live engine state">
+                <h2>🛰️ Live Engine State</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div id="live-strategy" class="stat-value" style="font-size: 1.1rem;">IDLE</div>
+                        <div class="stat-label">Strategy</div>
+                    </div>
+                    <div class="stat-item">
+                        <div id="live-cycle" class="stat-value">0</div>
+                        <div class="stat-label">Cycle</div>
+                    </div>
+                    <div class="stat-item">
+                        <div id="live-epoch" class="stat-value">0</div>
+                        <div class="stat-label">Epoch</div>
+                    </div>
+                    <div class="stat-item">
+                        <div id="live-dice" class="stat-value">0.0000</div>
+                        <div class="stat-label">Dice Score</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Real-Time Analysis -->
+            <section class="card animate" aria-label="Real-time model analysis output">
+                <h2>🔬 Real-Time Analysis</h2>
+                <div class="img-wrapper">
+                    <img id="analysis-image"
+                         src=""
+                         alt="Live segmentation prediction from the current model"
+                         class="visual-content"
+                         style="display: none;"
+                         onerror="this.style.display='none'; document.getElementById('analysis-placeholder').style.display='flex';">
+                    <p id="analysis-placeholder" class="img-placeholder" style="display: flex; align-items: center; gap: 0.5rem;">
+                        ⏳ Analysis will appear here once training begins…
+                    </p>
+                </div>
+            </section>
+
+            <!-- Dynamic Results Chart -->
+            <section class="card animate" aria-label="Performance comparison chart">
+                <h2>📊 Dynamic Results</h2>
+                <div class="img-wrapper">
+                    <img id="main-plot"
+                         src="results/al_comparison_standard.png"
+                         alt="Active learning strategy performance comparison"
+                         class="visual-content"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <p class="img-placeholder" style="display: none; align-items: center; gap: 0.5rem;">
+                        📈 Chart will appear after the first experiment completes.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Engine Logs -->
+            <section class="card animate span-3" aria-label="Engine log output">
+                <h2>📜 Engine Logs</h2>
+                <div id="live-log-container" class="live-log" aria-live="polite" aria-atomic="false">
+                    <div>> [System] Ready — click Start Real-Time Training to begin.</div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        let isRunning = false;
+        let pollInterval = null;
+        let graphRefreshCounter = 0;
+
+        async function startExperiment() {
+            if (isRunning) return;
+            document.getElementById('run-button').disabled = true;
+            document.getElementById('stop-button').disabled = false;
+            try {
+                await fetch('/run', { method: 'POST' });
+            } catch(e) {
+                console.error('Failed to start:', e);
+                document.getElementById('run-button').disabled = false;
+                document.getElementById('stop-button').disabled = true;
+                return;
+            }
+            isRunning = true;
+            startPolling();
+        }
+
+        async function stopExperiment() {
+            document.getElementById('stop-button').disabled = true;
+            try {
+                await fetch('/stop', { method: 'POST' });
+            } catch(e) {
+                console.error('Failed to send stop:', e);
+            }
+        }
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            graphRefreshCounter = 0;
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/status');
+                    const data = await response.json();
+
+                    // Status text + indicator
+                    const statusText = data.status.toUpperCase();
+                    document.getElementById('status-text').innerText = statusText;
+                    const isActive = data.status === 'running' || data.status === 'stopping';
+                    document.getElementById('status-indicator').className =
+                        'status-' + (isActive ? 'running' : 'completed');
+
+                    // Progress bar
+                    const pct = data.progress_percent;
+                    document.getElementById('progress-fill').style.width = pct + '%';
+                    document.getElementById('progress-text').innerText = pct;
+                    document.getElementById('progress-bar').setAttribute('aria-valuenow', pct);
+
+                    // Live stats
+                    document.getElementById('live-strategy').innerText = data.current_strategy;
+                    document.getElementById('live-cycle').innerText  = data.current_cycle;
+                    document.getElementById('live-epoch').innerText   = data.current_epoch;
+                    document.getElementById('live-dice').innerText    = Number(data.latest_dice).toFixed(4);
+
+                    // Analysis image
+                    if (data.analysis_image_path) {
+                        const img = document.getElementById('analysis-image');
+                        img.src = data.analysis_image_path;
+                        img.style.display = 'block';
+                        document.getElementById('analysis-placeholder').style.display = 'none';
+                    }
+
+                    // Logs (XSS-safe via textContent)
+                    const logContainer = document.getElementById('live-log-container');
+                    const atBottom = logContainer.scrollHeight - logContainer.scrollTop
+                                     <= logContainer.clientHeight + 12;
+                    logContainer.innerHTML = '';
+                    data.logs.forEach(l => {
+                        const div = document.createElement('div');
+                        div.textContent = '> ' + l;
+                        logContainer.appendChild(div);
+                    });
+                    if (atBottom) logContainer.scrollTop = logContainer.scrollHeight;
+
+                    // Graph refresh every ~5 s while active
+                    if (isActive) {
+                        graphRefreshCounter++;
+                        if (graphRefreshCounter >= 5) {
+                            graphRefreshCounter = 0;
+                            refreshImages();
+                        }
+                    }
+
+                    // Terminal states
+                    if (data.status === 'completed' || data.status === 'stopped' || data.status === 'error') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        document.getElementById('run-button').disabled = false;
+                        document.getElementById('stop-button').disabled = true;
+                        isRunning = false;
+                        refreshImages();
+                    }
+                } catch(e) {
+                    console.warn('Poll error (server may be restarting):', e.message);
+                }
+            }, 1000);
+        }
+
+        function refreshImages() {
+            const t = Date.now();
+            const plot = document.getElementById('main-plot');
+            plot.style.display = 'block'; // show if previously hidden by onerror
+            plot.src = 'results/al_comparison_standard.png?t=' + t;
+        }
+
+        // On page load: auto-resume if an experiment is already running
+        (async function init() {
+            try {
+                const res  = await fetch('/status');
+                const data = await res.json();
+                if (data.status === 'running' || data.status === 'stopping') {
+                    isRunning = true;
+                    document.getElementById('run-button').disabled = true;
+                    document.getElementById('stop-button').disabled = false;
+                    startPolling();
+                }
+            } catch(e) {
+                console.warn('Initial status check failed:', e.message);
+            }
+        })();
+    </script>
+
+</body>
+</html>

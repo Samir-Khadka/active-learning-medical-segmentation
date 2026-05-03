@@ -1,0 +1,49 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install project and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"  || pip install -r requirements.txt -r requirements-dev.txt
+
+    - name: Run unit tests with coverage
+      run: |
+        python -m pytest tests/ -v --tb=short
+
+    - name: Lint — fatal syntax/undefined errors only
+      run: |
+        flake8 src tests \
+          --count \
+          --select=E9,F63,F7,F82 \
+          --show-source \
+          --statistics
+
+    - name: Check import health
+      run: |
+        cd src && python -c "
+        from model import UNet
+        from engine import ActiveLearningTrainer
+        from al_strategies import random_sampling
+        from dataset import get_dataloaders
+        from logger import setup_logging
+        print('All imports OK')
+        "
